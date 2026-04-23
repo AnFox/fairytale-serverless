@@ -1,0 +1,72 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build check
+        run: go build ./...
+
+  deploy-dev:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: gha-fairytale-deploy
+          aws-region: eu-central-1
+
+      - uses: aws-actions/setup-sam@v2
+
+      - name: SAM build
+        run: sam build
+
+      - name: SAM deploy (dev)
+        run: |
+          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
+            --resolve-s3 --capabilities CAPABILITY_IAM \
+            --stack-name fairytale-dev --region eu-central-1 \
+            --parameter-overrides Stage=dev
+
+      - name: Run database migrations
+        run: |
+          aws lambda invoke --function-name fairytale-migrate-dev \
+            --region eu-central-1 /tmp/migrate-out.json
+          cat /tmp/migrate-out.json
+
+      - name: Output webhook URL
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name fairytale-dev --region eu-central-1 \
+            --query 'Stacks[0].Outputs[?OutputKey==`WebhookURL`].OutputValue' \
+            --output text
