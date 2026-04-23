@@ -82,7 +82,11 @@ func (b *Bot) handleCallback(ctx context.Context, q *telegram.CallbackQuery) err
 		if u, err := b.store.FindUserByTelegramID(ctx, q.From.ID); err == nil && u.ID == AdminUserID {
 			isAdmin = true
 		}
-		return b.rollNpcByName(ctx, chatID, cd.NpcName, cd.AC, isAdmin)
+		weaponNumber := cd.Number
+		if weaponNumber == 0 {
+			weaponNumber = 1
+		}
+		return b.rollNpcByName(ctx, chatID, cd.NpcName, weaponNumber, cd.AC, isAdmin)
 
 	default:
 		return nil

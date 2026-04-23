@@ -17,6 +17,7 @@ import (
 	"github.com/anfox/fairytale-serverless/internal/bot"
 	"github.com/anfox/fairytale-serverless/internal/config"
 	"github.com/anfox/fairytale-serverless/internal/database"
+	"github.com/anfox/fairytale-serverless/internal/sheets"
 	"github.com/anfox/fairytale-serverless/internal/store"
 	"github.com/anfox/fairytale-serverless/internal/telegram"
 )
@@ -30,7 +31,7 @@ var (
 
 func warmInit(ctx context.Context) error {
 	initOnce.Do(func() {
-		cfg, err := config.Load(ctx, config.KeyNeonDSN)
+		cfg, err := config.Load(ctx, config.KeyNeonDSN, config.KeyGoogleDeveloperKey)
 		if err != nil {
 			initErr = err
 			return
@@ -45,7 +46,7 @@ func warmInit(ctx context.Context) error {
 			return
 		}
 		sender := bot.NewSQSSender(sqs.NewFromConfig(awsCfg), cfg.OutboundQueueURL)
-		app = bot.New(store.New(db.Pool), sender)
+		app = bot.New(store.New(db.Pool), sender, sheets.NewClient(cfg.GoogleDeveloperKey))
 	})
 	return initErr
 }

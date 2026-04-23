@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/anfox/fairytale-serverless/internal/sheets"
 	"github.com/anfox/fairytale-serverless/internal/store"
 	"github.com/anfox/fairytale-serverless/internal/telegram"
 )
@@ -17,10 +18,11 @@ import (
 type Bot struct {
 	store  *store.Store
 	sender Sender
+	sheets *sheets.Client // optional; nil disables fresh-sheet lookups
 }
 
-func New(s *store.Store, sender Sender) *Bot {
-	return &Bot{store: s, sender: sender}
+func New(s *store.Store, sender Sender, sc *sheets.Client) *Bot {
+	return &Bot{store: s, sender: sender, sheets: sc}
 }
 
 // Handle dispatches an inbound Telegram update.
