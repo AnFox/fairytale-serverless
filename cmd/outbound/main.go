@@ -16,16 +16,6 @@ import (
 	"github.com/anfox/fairytale-serverless/internal/telegram"
 )
 
-// OutboundMessage is the payload enqueued by botworker.
-type OutboundMessage struct {
-	ChatID          int64                          `json:"chat_id"`
-	Text            string                         `json:"text"`
-	ParseMode       string                         `json:"parse_mode,omitempty"`
-	Keyboard        *telegram.InlineKeyboardMarkup `json:"keyboard,omitempty"`
-	CallbackQueryID string                         `json:"callback_query_id,omitempty"`
-	CallbackText    string                         `json:"callback_text,omitempty"`
-}
-
 var (
 	initOnce sync.Once
 	cfg      *config.Config
@@ -50,7 +40,7 @@ func handler(ctx context.Context, ev events.SQSEvent) error {
 	}
 
 	for _, rec := range ev.Records {
-		var msg OutboundMessage
+		var msg telegram.OutboundMessage
 		if err := json.Unmarshal([]byte(rec.Body), &msg); err != nil {
 			log.Printf("skip malformed outbound: %v", err)
 			continue
