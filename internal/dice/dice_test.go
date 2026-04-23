@@ -103,6 +103,14 @@ func TestNoCritOnMultipleDice(t *testing.T) {
 	}
 }
 
+func TestNoCritOnD100(t *testing.T) {
+	// Larger-than-20 dice don't crit either — only clean d20 triggers.
+	r := Parse("d100").ExecuteWith(&fixedRand{seq: []int{99}}).ApplyCrit(20)
+	if r.Crit || r.CritLabel != "" {
+		t.Fatalf("expected no crit on d100, got %+v", r)
+	}
+}
+
 func TestOutputSingleDieNoModifier(t *testing.T) {
 	r := Parse("d6").ExecuteWith(&fixedRand{seq: []int{3}})
 	if r.Output != "4" {
