@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Fairytale - Telegram RPG bot (dice rolls + Google Sheets sync)
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: provided.al2023
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        SSM_PREFIX: !Sub "/fairytale/${Stage}"
+        REGION: !Ref AWS::Region
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+
+Resources:
+  # ============================================
+  # SQS: BotTasks (webhook → botworker)
+  # ============================================
+  BotTasksQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "fairytale-bottasks-${Stage}"
+      VisibilityTimeout: 90
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BotTasksDLQ.Arn
+        maxReceiveCount: 3
+
+  BotTasksDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "fairytale-bottasks-dlq-${Stage}"
+      MessageRetentionPeriod: 1209600  # 14 days
+
+  # ============================================
+  # SQS: Outbound (botworker → outbound → Telegram)
+  # ============================================
+  OutboundQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "fairytale-outbound-${Stage}"
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OutboundDLQ.Arn
+        maxReceiveCount: 3
+
+  OutboundDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "fairytale-outbound-dlq-${Stage}"
+      MessageRetentionPeriod: 1209600
+
+  # ============================================
+  # Webhook Lambda (Telegram → SQS)
+  # ============================================
+  WebhookFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "fairytale-webhook-${Stage}"
+      CodeUri: ./
+      Handler: bootstrap
+      Timeout: 10
+      Environment:
+        Variables:
+          BOT_TASKS_QUEUE_URL: !Ref BotTasksQueue
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub "fairytale/${Stage}/*"
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt BotTasksQueue.QueueName
+      Events:
+        WebhookApi:
+          Type: Api
+          Properties:
+            Path: /webhook
+            Method: post
+
+  # ============================================
+  # BotWorker Lambda (SQS consumer)
+  # ============================================
+  BotWorkerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "fairytale-botworker-${Stage}"
+      CodeUri: ./
+      Handler: bootstrap
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          OUTBOUND_QUEUE_URL: !Ref OutboundQueue
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub "fairytale/${Stage}/*"
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt OutboundQueue.QueueName
+      Events:
+        BotTasksSQS:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BotTasksQueue.Arn
+            BatchSize: 1
+
+  # ============================================
+  # Outbound Lambda (SQS → Telegram)
+  # ============================================
+  OutboundFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "fairytale-outbound-${Stage}"
+      CodeUri: ./
+      Handler: bootstrap
+      Timeout: 30
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub "fairytale/${Stage}/*"
+      Events:
+        OutboundSQS:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt OutboundQueue.Arn
+            BatchSize: 1
+
+  # ============================================
+  # SheetsSync Lambda (EventBridge scheduled)
+  # ============================================
+  SheetsSyncFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "fairytale-sheetssync-${Stage}"
+      CodeUri: ./
+      Handler: bootstrap
+      Timeout: 60
+      MemorySize: 512
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub "fairytale/${Stage}/*"
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Enabled: true
+
+  # ============================================
+  # Migrate Lambda (manual invoke)
+  # ============================================
+  MigrateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "fairytale-migrate-${Stage}"
+      CodeUri: ./
+      Handler: bootstrap
+      Timeout: 300
+      Policies:
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub "fairytale/${Stage}/*"
+
+Outputs:
+  WebhookURL:
+    Description: Telegram webhook endpoint
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/webhook"
+
+  BotTasksQueueUrl:
+    Description: URL of BotTasks SQS queue
+    Value: !Ref BotTasksQueue
+
+  OutboundQueueUrl:
+    Description: URL of Outbound SQS queue
+    Value: !Ref OutboundQueue

@@ -1,0 +1,22 @@
+.aws-sam/
+bootstrap
+*.zip
+
+# Go
+*.exe
+*.test
+*.out
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Env
+.env
+.env.local
+samconfig.local.toml

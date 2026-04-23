@@ -1,0 +1,10 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "fairytale-dev"
+resolve_s3 = true
+s3_prefix = "fairytale"
+region = "eu-central-1"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+image_repositories = []
