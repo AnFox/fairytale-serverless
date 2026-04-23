@@ -30,6 +30,12 @@ func (b *Bot) handleCommand(ctx context.Context, msg *telegram.Message, text str
 			ChatID: msg.Chat.ID,
 			Text:   "Hello-hello!",
 		})
+	case "d":
+		// Telegram's animated 🎲 — same as legacy $chat->dice()->send().
+		return b.sender.Send(ctx, telegram.OutboundMessage{
+			ChatID: msg.Chat.ID,
+			Dice:   true,
+		})
 	case "dice":
 		// "/dice 2d6+3" — strip the command, treat tail as formula.
 		_, tail, _ := strings.Cut(text, " ")

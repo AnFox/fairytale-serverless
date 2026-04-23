@@ -53,6 +53,12 @@ func handler(ctx context.Context, ev events.SQSEvent) error {
 				return err
 			}
 		}
+		if msg.Dice {
+			if err := tg.SendDice(ctx, msg.ChatID); err != nil {
+				return err
+			}
+			continue
+		}
 		if msg.Text == "" {
 			continue
 		}

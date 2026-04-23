@@ -96,6 +96,13 @@ func (c *Client) AnswerCallbackQuery(ctx context.Context, req AnswerCallbackQuer
 	return c.call(ctx, "answerCallbackQuery", req)
 }
 
+// SendDice triggers Telegram's animated 🎲 in the chat.
+func (c *Client) SendDice(ctx context.Context, chatID int64) error {
+	return c.call(ctx, "sendDice", struct {
+		ChatID int64 `json:"chat_id"`
+	}{ChatID: chatID})
+}
+
 func (c *Client) call(ctx context.Context, method string, payload any) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
