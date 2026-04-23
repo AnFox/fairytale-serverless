@@ -61,6 +61,7 @@ func handler(ctx context.Context, ev events.SQSEvent) error {
 			log.Printf("skip malformed update: %v", err)
 			continue
 		}
+		logUpdate(upd)
 		if err := app.Handle(ctx, upd); err != nil {
 			// Returning an error fails the SQS batch (single-message batch),
 			// triggering retry → DLQ after maxReceiveCount.
@@ -68,6 +69,21 @@ func handler(ctx context.Context, ev events.SQSEvent) error {
 		}
 	}
 	return nil
+}
+
+func logUpdate(u telegram.Update) {
+	switch {
+	case u.CallbackQuery != nil:
+		log.Printf("update %d: callback from=%d data=%q", u.UpdateID, u.CallbackQuery.From.ID, u.CallbackQuery.Data)
+	case u.Message != nil:
+		from := int64(0)
+		if u.Message.From != nil {
+			from = u.Message.From.ID
+		}
+		log.Printf("update %d: message from=%d chat=%d text=%q", u.UpdateID, from, u.Message.Chat.ID, u.Message.Text)
+	default:
+		log.Printf("update %d: unhandled type", u.UpdateID)
+	}
 }
 
 func main() {

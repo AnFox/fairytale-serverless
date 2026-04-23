@@ -39,6 +39,10 @@ func (b *Bot) handleCommand(ctx context.Context, msg *telegram.Message, text str
 		}
 		return b.handleDiceFormula(ctx, msg, tail, displayName(msg))
 	default:
+		// "/d6", "/d20", "/2d6+3" — bare formulas as commands.
+		if looksLikeFormula(cmd) {
+			return b.handleDiceFormula(ctx, msg, cmd, displayName(msg))
+		}
 		return nil
 	}
 }
