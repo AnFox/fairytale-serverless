@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/anfox/fairytale-serverless/internal/dice"
@@ -47,7 +48,26 @@ func (b *Bot) handleCommand(ctx context.Context, msg *telegram.Message, text str
 	case "npc":
 		_, tail, _ := strings.Cut(text, " ")
 		return b.handleNpc(ctx, msg, tail)
+	case "w", "wm", "w4", "w6", "w7":
+		return b.handleWho(ctx, msg.Chat.ID, cmd)
+	case "drop":
+		return b.handleDrop(ctx, msg.Chat.ID)
+	case "i":
+		return b.handleItem(ctx, msg)
 	default:
+		// "/3" or "/3 12" — slash-prefixed weapon roll. Tail (if present)
+		// is parsed as target AC.
+		if isInteger(cmd) {
+			n, _ := strconv.Atoi(cmd)
+			ac := 0
+			_, tail, _ := strings.Cut(text, " ")
+			if tail = strings.TrimSpace(tail); tail != "" {
+				if v, err := strconv.Atoi(tail); err == nil {
+					ac = v
+				}
+			}
+			return b.handleWeaponRoll(ctx, msg, n, ac)
+		}
 		// "/d6", "/d20", "/2d6+3" — bare formulas as commands.
 		if looksLikeFormula(cmd) {
 			return b.handleDiceFormula(ctx, msg, cmd, displayName(msg))
