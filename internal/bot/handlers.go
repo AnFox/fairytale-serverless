@@ -38,6 +38,9 @@ func (b *Bot) handleCommand(ctx context.Context, msg *telegram.Message, text str
 			return nil
 		}
 		return b.handleDiceFormula(ctx, msg, tail, displayName(msg))
+	case "npc":
+		_, tail, _ := strings.Cut(text, " ")
+		return b.handleNpc(ctx, msg, tail)
 	default:
 		// "/d6", "/d20", "/2d6+3" — bare formulas as commands.
 		if looksLikeFormula(cmd) {

@@ -24,6 +24,7 @@ type Config struct {
 	TelegramWebhookSecret string
 	NeonDSN               string
 	GoogleServiceAccount  string
+	GoogleDeveloperKey    string
 	BotTasksQueueURL      string
 	OutboundQueueURL      string
 }
@@ -96,6 +97,8 @@ func applyParam(cfg *Config, prefix string, p types.Parameter) {
 		cfg.NeonDSN = v
 	case "google-service-account":
 		cfg.GoogleServiceAccount = v
+	case "google-developer-key":
+		cfg.GoogleDeveloperKey = v
 	}
 }
 
@@ -105,4 +108,5 @@ const (
 	KeyTelegramWebhookSecret = "telegram-webhook-secret"
 	KeyNeonDSN               = "neon-dsn"
 	KeyGoogleServiceAccount  = "google-service-account"
+	KeyGoogleDeveloperKey    = "google-developer-key"
 )

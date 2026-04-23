@@ -17,6 +17,7 @@ type callbackData struct {
 	Formula string `json:"f,omitempty"`
 	Number  int    `json:"n,omitempty"`
 	AC      int    `json:"ac,omitempty"`
+	NpcName string `json:"npc,omitempty"`
 }
 
 func encodeCallback(cd callbackData) string {
@@ -75,6 +76,13 @@ func (b *Bot) handleCallback(ctx context.Context, q *telegram.CallbackQuery) err
 			return fmt.Errorf("find user: %w", err)
 		}
 		return b.rollWeaponFor(ctx, chatID, user, cd.Number, cd.AC)
+
+	case "rerollNpc":
+		isAdmin := false
+		if u, err := b.store.FindUserByTelegramID(ctx, q.From.ID); err == nil && u.ID == AdminUserID {
+			isAdmin = true
+		}
+		return b.rollNpcByName(ctx, chatID, cd.NpcName, cd.AC, isAdmin)
 
 	default:
 		return nil
