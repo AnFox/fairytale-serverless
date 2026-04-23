@@ -93,17 +93,22 @@ func (r Roll) ExecuteWith(src RandSource) Roll {
 	return r
 }
 
-// ApplyCrit sets Crit/Miss flags based on the first die.
+// ApplyCrit sets Crit/Miss flags based on the first die. Mirrors the legacy
+// Handler::getCrit gate: crits only apply for a single d20-or-bigger roll, so
+// d6 / 2d20 / d12 never produce a critical outcome.
 func (r Roll) ApplyCrit(critThreshold int) Roll {
 	if critThreshold <= 0 {
 		critThreshold = 20
 	}
-	if r.Number >= critThreshold {
-		r.Crit = true
-		r.CritLabel = " CRITICAL HIT!"
-	} else if r.Number == 1 {
+	if r.Dice < 20 || r.Count != 1 {
+		return r
+	}
+	if r.Number == 1 {
 		r.Miss = true
-		r.CritLabel = " Critical Miss!"
+		r.CritLabel = "🔴 Critical miss!"
+	} else if r.Number >= critThreshold {
+		r.Crit = true
+		r.CritLabel = "🟢 Critical hit!"
 	}
 	return r
 }

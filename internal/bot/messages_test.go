@@ -45,19 +45,19 @@ func TestIsInteger(t *testing.T) {
 }
 
 func TestComputeWeaponOutcomeMissDropsDamage(t *testing.T) {
-	hit := dice.Roll{Number: 1, Sum: 1, Output: "1", Miss: true, CritLabel: " Critical Miss!"}
+	hit := dice.Roll{Number: 1, Sum: 1, Output: "1", Miss: true, CritLabel: "🔴 Critical miss!"}
 	dmg := dice.Roll{Sum: 5, Output: "5"}
 	out := computeWeaponOutcome(hit, dmg, 0)
 	if out.DamageRoll != nil {
 		t.Fatal("miss must drop damage")
 	}
-	if !strings.Contains(out.HitOutput, "Critical Miss") {
+	if !strings.Contains(out.HitOutput, "Critical miss") {
 		t.Fatalf("expected miss label, got %q", out.HitOutput)
 	}
 }
 
 func TestComputeWeaponOutcomeCritDoublesDamage(t *testing.T) {
-	hit := dice.Roll{Number: 20, Sum: 20, Output: "20", Crit: true, CritLabel: " CRITICAL HIT!"}
+	hit := dice.Roll{Number: 20, Sum: 20, Output: "20", Crit: true, CritLabel: "🟢 Critical hit!"}
 	dmg := dice.Roll{Sum: 7, Output: "7"}
 	out := computeWeaponOutcome(hit, dmg, 0)
 	if out.DamageRoll == nil || !strings.Contains(out.DamageBlock, "x 2 = *14*") {

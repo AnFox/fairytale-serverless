@@ -64,12 +64,18 @@ func TestCritOnD20(t *testing.T) {
 	if !r.Crit || r.Miss {
 		t.Fatalf("expected crit, got %+v", r)
 	}
+	if r.CritLabel != "🟢 Critical hit!" {
+		t.Fatalf("expected hit label, got %q", r.CritLabel)
+	}
 }
 
 func TestMissOnD20(t *testing.T) {
 	r := Parse("d20").ExecuteWith(&fixedRand{seq: []int{0}}).ApplyCrit(20)
 	if !r.Miss || r.Crit {
 		t.Fatalf("expected miss, got %+v", r)
+	}
+	if r.CritLabel != "🔴 Critical miss!" {
+		t.Fatalf("expected miss label, got %q", r.CritLabel)
 	}
 }
 
@@ -78,6 +84,22 @@ func TestCritThresholdLowerThan20(t *testing.T) {
 	r := Parse("d20").ExecuteWith(&fixedRand{seq: []int{17}}).ApplyCrit(18)
 	if !r.Crit {
 		t.Fatalf("expected crit at threshold 18, got %+v", r)
+	}
+}
+
+func TestNoCritOnD6(t *testing.T) {
+	// Smaller dice never crit even if max value rolled.
+	r := Parse("d6").ExecuteWith(&fixedRand{seq: []int{5}}).ApplyCrit(20)
+	if r.Crit || r.Miss || r.CritLabel != "" {
+		t.Fatalf("expected no crit on d6, got %+v", r)
+	}
+}
+
+func TestNoCritOnMultipleDice(t *testing.T) {
+	// 2d20 should not crit even if first die is 20.
+	r := Parse("2d20").ExecuteWith(&fixedRand{seq: []int{19, 5}}).ApplyCrit(20)
+	if r.Crit || r.CritLabel != "" {
+		t.Fatalf("expected no crit on 2d20, got %+v", r)
 	}
 }
 
