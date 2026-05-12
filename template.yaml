@@ -25,6 +25,28 @@ Parameters:
 
 Resources:
   # ============================================
+  # S3: sync-state bucket (Sheets hash map)
+  # ============================================
+  # Holds a tiny JSON file with sha256 hashes per sheet. sheetssync reads
+  # this on every tick; if hashes match the last successful run, the Lambda
+  # exits *without opening a Neon connection*. Neon stays suspended unless
+  # players are actively using the bot, which is the whole point.
+  SyncStateBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "fairytale-sync-state-${AWS::AccountId}-${Stage}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 7
+
+  # ============================================
   # SQS: BotTasks (webhook → botworker)
   # ============================================
   BotTasksQueue:
@@ -152,9 +174,14 @@ Resources:
       Handler: bootstrap
       Timeout: 60
       MemorySize: 512
+      Environment:
+        Variables:
+          SYNC_STATE_BUCKET: !Ref SyncStateBucket
       Policies:
         - SSMParameterReadPolicy:
             ParameterName: !Sub "fairytale/${Stage}/*"
+        - S3CrudPolicy:
+            BucketName: !Ref SyncStateBucket
       Events:
         Schedule:
           Type: Schedule
