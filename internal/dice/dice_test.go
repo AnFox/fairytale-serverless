@@ -134,3 +134,74 @@ func TestUnparseableFallsBackToD20(t *testing.T) {
 		t.Fatalf("expected d20 fallback, got %+v", r)
 	}
 }
+
+func TestParseMultipleModifiers(t *testing.T) {
+	// Sheet formulas arrive with stats already substituted, e.g. "d10+STR+1"
+	// → "d10+3+1". Before multi-term support this fell back to a bare d20.
+	r := Parse("d10+3+1")
+	if r.Count != 1 || r.Dice != 10 {
+		t.Fatalf("bad parse: %+v", r)
+	}
+	if r.Modifier != 4 || r.Sign != 1 {
+		t.Fatalf("expected combined modifier 4, got %d (sign %d)", r.Modifier, r.Sign)
+	}
+}
+
+func TestExecuteMultipleModifiers(t *testing.T) {
+	// seq {2} → die 3; output keeps each term so it lines up with the formula.
+	r := Parse("d14+5+4").ExecuteWith(&fixedRand{seq: []int{2}})
+	if r.Sum != 12 {
+		t.Fatalf("expected 12, got %d (%+v)", r.Sum, r)
+	}
+	if r.Output != "3+5+4" {
+		t.Fatalf("expected 3+5+4, got %q", r.Output)
+	}
+}
+
+func TestExecuteMixedSignModifiers(t *testing.T) {
+	r := Parse("2d6+3-1").ExecuteWith(&fixedRand{seq: []int{2, 4}})
+	if r.Sum != 10 {
+		t.Fatalf("expected 10, got %d (%+v)", r.Sum, r)
+	}
+	if r.Output != "[3,5]+3-1" {
+		t.Fatalf("expected [3,5]+3-1, got %q", r.Output)
+	}
+	if r.Modifier != 2 || r.Sign != 1 {
+		t.Fatalf("expected net modifier +2, got %d (sign %d)", r.Modifier, r.Sign)
+	}
+}
+
+func TestExecuteMultipleDiceGroups(t *testing.T) {
+	r := Parse("d8+d4+2").ExecuteWith(&fixedRand{seq: []int{5, 1}})
+	if r.Sum != 10 {
+		t.Fatalf("expected 10, got %d (%+v)", r.Sum, r)
+	}
+	if r.Output != "6+2+2" {
+		t.Fatalf("expected 6+2+2, got %q", r.Output)
+	}
+}
+
+func TestNoCritWhenExtraDiceGroup(t *testing.T) {
+	// "d20+d4" isn't a clean attack roll — crit stays off, as with 2d20.
+	r := Parse("d20+d4").ExecuteWith(&fixedRand{seq: []int{19, 0}}).ApplyCrit(20)
+	if r.Crit || r.CritLabel != "" {
+		t.Fatalf("expected no crit, got %+v", r)
+	}
+}
+
+func TestCritStillWorksWithMultipleModifiers(t *testing.T) {
+	r := Parse("d20+3+1").ExecuteWith(&fixedRand{seq: []int{19}}).ApplyCrit(20)
+	if !r.Crit {
+		t.Fatalf("expected crit, got %+v", r)
+	}
+	if r.Sum != 24 {
+		t.Fatalf("expected 24, got %d", r.Sum)
+	}
+}
+
+func TestTrailingOperatorFallsBackToD20(t *testing.T) {
+	r := Parse("d10+")
+	if r.Count != 1 || r.Dice != 20 {
+		t.Fatalf("expected d20 fallback, got %+v", r)
+	}
+}
