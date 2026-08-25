@@ -89,3 +89,15 @@ func TestComputeWeaponOutcomeHopless20BeatsHighAC(t *testing.T) {
 		t.Fatalf("expected hopeless-hit label, got %q", out.HitOutput)
 	}
 }
+
+func TestComputeWeaponOutcomeShowsTotals(t *testing.T) {
+	hit := dice.Roll{Number: 15, Sum: 16, Modifier: 1, Output: "15+1"}
+	dmg := dice.Roll{Sum: 12, Output: "3+5+4"}
+	out := computeWeaponOutcome(hit, dmg, 10)
+	if out.HitOutput != "15+1 = 16" {
+		t.Fatalf("hit total missing: %q", out.HitOutput)
+	}
+	if out.DamageBlock != "3+5+4 = 12" {
+		t.Fatalf("damage total missing: %q", out.DamageBlock)
+	}
+}

@@ -205,3 +205,25 @@ func TestTrailingOperatorFallsBackToD20(t *testing.T) {
 		t.Fatalf("expected d20 fallback, got %+v", r)
 	}
 }
+
+func TestDisplayAppendsTotal(t *testing.T) {
+	r := Parse("d14+5+4").ExecuteWith(&fixedRand{seq: []int{2}})
+	if r.Display() != "3+5+4 = 12" {
+		t.Fatalf("expected 3+5+4 = 12, got %q", r.Display())
+	}
+}
+
+func TestDisplayKeepsBareDieUnchanged(t *testing.T) {
+	// A single die is already its own total — no "8 = 8" noise.
+	r := Parse("d20").ExecuteWith(&fixedRand{seq: []int{7}})
+	if r.Display() != "8" {
+		t.Fatalf("expected 8, got %q", r.Display())
+	}
+}
+
+func TestDisplayMultipleDiceShowsTotal(t *testing.T) {
+	r := Parse("2d6").ExecuteWith(&fixedRand{seq: []int{2, 4}})
+	if r.Display() != "[3,5] = 8" {
+		t.Fatalf("expected [3,5] = 8, got %q", r.Display())
+	}
+}

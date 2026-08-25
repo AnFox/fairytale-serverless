@@ -30,13 +30,13 @@ func substituteAttrs(formula string, c *model.Character) string {
 // weaponOutcome is the result of resolving hit/damage against an optional AC.
 // Mirrors the legacy hoplessHit / miss / crit branches in Handler.php.
 type weaponOutcome struct {
-	HitOutput   string  // multi-line; mutated like in PHP rollOut
+	HitOutput   string // multi-line; mutated like in PHP rollOut
 	DamageRoll  *dice.Roll
 	DamageBlock string // formatted "X x 2 = Y" if crit applied
 }
 
 func computeWeaponOutcome(hit dice.Roll, dmg dice.Roll, ac int) weaponOutcome {
-	out := weaponOutcome{HitOutput: hit.Output}
+	out := weaponOutcome{HitOutput: hit.Display()}
 	dmgPtr := &dmg
 
 	hoplessHit := false
@@ -57,14 +57,14 @@ func computeWeaponOutcome(hit dice.Roll, dmg dice.Roll, ac int) weaponOutcome {
 		if hit.Crit && dmgPtr != nil {
 			out.HitOutput += "\n" + hit.CritLabel
 			doubled := dmgPtr.Sum * 2
-			out.DamageBlock = fmt.Sprintf("%s x 2 = *%d*", dmgPtr.Output, doubled)
+			out.DamageBlock = fmt.Sprintf("%s x 2 = *%d*", dmgPtr.Display(), doubled)
 		}
 	}
 
 	if dmgPtr != nil {
 		out.DamageRoll = dmgPtr
 		if out.DamageBlock == "" {
-			out.DamageBlock = dmgPtr.Output
+			out.DamageBlock = dmgPtr.Display()
 		}
 	}
 	_ = hoplessHit
@@ -80,7 +80,7 @@ func formatDiceMessage(author string, r dice.Roll) string {
 	}
 	sb.WriteString(r.Input)
 	sb.WriteString("\n🎲 ")
-	sb.WriteString(r.Output)
+	sb.WriteString(r.Display())
 	if r.CritLabel != "" {
 		sb.WriteString("\n")
 		sb.WriteString(r.CritLabel)

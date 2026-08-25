@@ -6,6 +6,7 @@
 package dice
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"regexp"
 	"strconv"
@@ -217,6 +218,16 @@ func (r Roll) ApplyCrit(critThreshold int) Roll {
 		r.CritLabel = "🟢 Critical hit!"
 	}
 	return r
+}
+
+// Display renders the roll for chat: the expression plus its total, e.g.
+// "3+5+4 = 12". A bare single die already reads as its own total, so "8"
+// stays "8" instead of the noisier "8 = 8".
+func (r Roll) Display() string {
+	if r.Output == strconv.Itoa(r.Sum) {
+		return r.Output
+	}
+	return fmt.Sprintf("%s = %d", r.Output, r.Sum)
 }
 
 // Roll is a convenience shortcut: Parse → Execute → ApplyCrit(20).
