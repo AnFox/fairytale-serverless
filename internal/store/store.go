@@ -23,10 +23,16 @@ func New(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
-// FindUserByTelegramID returns ErrNotFound if no user has this telegram_id.
+// FindUserByTelegramID matches the primary users.telegram_id first, then any
+// extra account linked in user_telegram_accounts. Returns ErrNotFound if
+// neither matches.
 func (s *Store) FindUserByTelegramID(ctx context.Context, tgID int64) (*model.User, error) {
 	const q = `SELECT id, name, email, telegram_id, current_weapon_number, spreadsheet_id, sheet, created_at, updated_at
-               FROM users WHERE telegram_id = $1`
+               FROM users
+               WHERE telegram_id = $1
+                  OR id IN (SELECT user_id FROM user_telegram_accounts WHERE telegram_id = $1)
+               ORDER BY (telegram_id = $1) IS TRUE DESC
+               LIMIT 1`
 	var u model.User
 	err := s.pool.QueryRow(ctx, q, tgID).Scan(
 		&u.ID, &u.Name, &u.Email, &u.TelegramID, &u.CurrentWeaponNumber,
